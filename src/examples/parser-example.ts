@@ -24,18 +24,22 @@ async function demonstrateParser() {
     console.log(`- Final Report: ${keyInfo.isLastInfo ? 'Yes' : 'No'}`);
     console.log('');
     
-    console.log('Earthquake Details:');
-    console.log(`- Origin Time: ${keyInfo.earthquake.originTime.toLocaleString('ja-JP')}`);
-    console.log(`- Magnitude: M${keyInfo.earthquake.magnitude}`);
-    console.log(`- Depth: ${keyInfo.earthquake.depth}km`);
-    console.log(`- Epicenter: ${keyInfo.earthquake.epicenter.name}`);
-    console.log(`- Location: ${keyInfo.earthquake.epicenter.lat}°N, ${keyInfo.earthquake.epicenter.lon}°E`);
-    console.log(`- Land/Sea: ${keyInfo.earthquake.epicenter.landOrSea}`);
-    console.log('');
+    if (keyInfo.earthquake) {
+      console.log('Earthquake Details:');
+      console.log(`- Origin Time: ${keyInfo.earthquake.originTime.toLocaleString('ja-JP')}`);
+      console.log(`- Magnitude: M${keyInfo.earthquake.magnitude}`);
+      console.log(`- Depth: ${keyInfo.earthquake.depth}km`);
+      console.log(`- Epicenter: ${keyInfo.earthquake.epicenter.name}`);
+      console.log(`- Location: ${keyInfo.earthquake.epicenter.lat}°N, ${keyInfo.earthquake.epicenter.lon}°E`);
+      console.log(`- Land/Sea: ${keyInfo.earthquake.epicenter.landOrSea}`);
+      console.log('');
+    }
     
-    console.log('Intensity Information:');
-    console.log(`- Maximum: ${EEWParser.formatIntensity(keyInfo.maxIntensity.from, keyInfo.maxIntensity.to)}`);
-    console.log('');
+    if (keyInfo.maxIntensity) {
+      console.log('Intensity Information:');
+      console.log(`- Maximum: ${EEWParser.formatIntensity(keyInfo.maxIntensity.from, keyInfo.maxIntensity.to)}`);
+      console.log('');
+    }
     
     if (keyInfo.warningRegions.length > 0) {
       console.log('Warning Regions:');
@@ -78,10 +82,14 @@ async function demonstrateParser() {
     if (mostSevere) {
       const info = EEWParser.extractKeyInfo(mostSevere.data);
       console.log(`\nMost severe earthquake:`);
-      console.log(`- Magnitude: M${info.earthquake.magnitude}`);
-      console.log(`- Maximum Intensity: ${EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to)}`);
-      console.log(`- Epicenter: ${info.earthquake.epicenter.name}`);
-      console.log(`- Time: ${info.earthquake.originTime.toLocaleString('ja-JP')}`);
+      if (info.earthquake) {
+        console.log(`- Magnitude: M${info.earthquake.magnitude}`);
+        console.log(`- Epicenter: ${info.earthquake.epicenter.name}`);
+        console.log(`- Time: ${info.earthquake.originTime.toLocaleString('ja-JP')}`);
+      }
+      if (info.maxIntensity) {
+        console.log(`- Maximum Intensity: ${EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to)}`);
+      }
     }
     
     // Check for significant updates
@@ -95,7 +103,9 @@ async function demonstrateParser() {
         updateCount++;
         console.log(`Update #${updateCount} at ${new Date(msg.timestamp).toLocaleTimeString('ja-JP')}:`);
         const info = EEWParser.extractKeyInfo(msg.data);
-        console.log(`  - M${info.earthquake.magnitude}, Max: ${EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to)}`);
+        const magnitude = info.earthquake ? `M${info.earthquake.magnitude}` : 'N/A';
+        const intensity = info.maxIntensity ? EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to) : 'N/A';
+        console.log(`  - ${magnitude}, Max: ${intensity}`);
       }
       previousData = msg.data;
     }
