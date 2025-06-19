@@ -127,7 +127,7 @@ const short = EEWFormatter.formatShort(message);
 const custom = EEWFormatter.formatCustom(message, '{emoji} {epicenter} M{magnitude}');
 ```
 
-### 3. Misskey投稿
+### 4. Misskey投稿
 
 ```typescript
 import { EEWPostingService } from './services/eew-posting-service';
@@ -145,6 +145,12 @@ await service.postTest();
 ## 実行例
 
 ```bash
+# サーバー起動
+npm run dev:server
+
+# サーバーテスト
+npm run dev:test-client
+
 # パーサーデモ
 npm run dev
 
@@ -160,6 +166,68 @@ npm run test:parse
 # Jestテスト
 npm test
 ```
+
+## API エンドポイント
+
+### POST /receive
+EEWデータを受信して処理します。
+
+**Request Body:**
+```json
+{
+  "type": "eew",
+  "timestamp": 1749919000370,
+  "data": {
+    "isLastInfo": false,
+    "isCanceled": false,
+    "isWarning": true,
+    // ... EEWデータ
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "processed": 1,
+  "results": [
+    {
+      "timestamp": 1749919000370,
+      "type": "warning",
+      "posted": true,
+      "summary": "🚨警報 能登半島沖 M5.7 震度5-"
+    }
+  ]
+}
+```
+
+### GET /health
+サーバーの健康状態を取得します。
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "uptime": 158234,
+  "stats": {
+    "totalReceived": 42,
+    "totalProcessed": 85,
+    "totalPosted": 12,
+    "errors": 0
+  },
+  "posting": {
+    "enabled": true,
+    "connected": true
+  }
+}
+```
+
+### GET /stats
+詳細な統計情報を取得します。
+
+### POST /test
+Misskey投稿機能をテストします。
 
 ## 出力例
 
