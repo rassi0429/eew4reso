@@ -1,5 +1,6 @@
 import { EEWData, EEWMessage } from '../types/eew';
 import { EEWParser } from '../parser/eew-parser';
+import { JSTDate } from '../utils/timezone';
 
 export class EEWFormatter {
   /**
@@ -33,7 +34,7 @@ export class EEWFormatter {
       '',
       keyInfo.cancelText || '先ほどの緊急地震速報を取り消します。',
       '',
-      `⏰ ${new Date().toLocaleString('ja-JP')}`
+      `⏰ ${JSTDate.nowString()}`
     ];
     
     return parts.join('\n');
@@ -80,8 +81,8 @@ export class EEWFormatter {
     }
     
     parts.push(
-      `🕐 **発生時刻**: ${earthquake.originTime.toLocaleString('ja-JP')}`,
-      `⏰ **情報時刻**: ${new Date(message.timestamp).toLocaleString('ja-JP')}`,
+      `🕐 **発生時刻**: ${JSTDate.toJSTString(earthquake.originTime)}`,
+      `⏰ **情報時刻**: ${JSTDate.toJSTString(message.timestamp)}`,
       '',
       data.isLastInfo ? '📋 最終報' : '📄 続報あり'
     );
@@ -112,8 +113,8 @@ export class EEWFormatter {
     }
     
     parts.push(
-      `🕐 **発生時刻**: ${earthquake.originTime.toLocaleString('ja-JP')}`,
-      `⏰ **情報時刻**: ${new Date(message.timestamp).toLocaleString('ja-JP')}`,
+      `🕐 **発生時刻**: ${JSTDate.toJSTString(earthquake.originTime)}`,
+      `⏰ **情報時刻**: ${JSTDate.toJSTString(message.timestamp)}`,
       '',
       data.isLastInfo ? '📋 最終報' : '📄 続報あり'
     );
@@ -130,7 +131,7 @@ export class EEWFormatter {
       '',
       '詳細情報を取得中...',
       '',
-      `⏰ ${new Date(message.timestamp).toLocaleString('ja-JP')}`
+      `⏰ ${JSTDate.toJSTString(message.timestamp)}`
     ];
     
     return parts.join('\n');

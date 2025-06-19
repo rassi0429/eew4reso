@@ -266,19 +266,24 @@ export class EEWPostingService {
         timeout: 30000
       },
       posting: {
-        enabled: true,
-        minSeverity: 30, // Roughly intensity 3+ or magnitude 3+
-        onlyWarnings: false,
-        includeCancellations: true,
-        visibility: 'public',
-        localOnly: false,
-        useContentWarning: false,
-        contentWarningText: '緊急地震速報',
-        rateLimitMs: 2000 // 2 seconds between posts
+        enabled: process.env.POSTING_ENABLED !== 'false',
+        minSeverity: parseInt(process.env.POSTING_MIN_SEVERITY || '30'),
+        onlyWarnings: process.env.POSTING_ONLY_WARNINGS === 'true',
+        includeCancellations: process.env.POSTING_INCLUDE_CANCELLATIONS !== 'false',
+        visibility: (process.env.POSTING_VISIBILITY as 'public' | 'home' | 'followers' | 'specified') || 'public',
+        localOnly: process.env.POSTING_LOCAL_ONLY === 'true',
+        useContentWarning: process.env.POSTING_USE_CONTENT_WARNING === 'true',
+        contentWarningText: process.env.POSTING_CONTENT_WARNING_TEXT || '緊急地震速報',
+        customTemplate: process.env.CUSTOM_TEMPLATE,
+        rateLimitMs: parseInt(process.env.POSTING_RATE_LIMIT_MS || '2000')
       },
       filters: {
-        minMagnitude: 3.0,
-        maxDepth: 700 // Very deep earthquakes are usually not felt
+        minMagnitude: process.env.FILTER_MIN_MAGNITUDE ? parseFloat(process.env.FILTER_MIN_MAGNITUDE) : 3.0,
+        maxDepth: process.env.FILTER_MAX_DEPTH ? parseInt(process.env.FILTER_MAX_DEPTH) : 700,
+        allowedRegions: process.env.FILTER_ALLOWED_REGIONS ? 
+          process.env.FILTER_ALLOWED_REGIONS.split(',').map(s => s.trim()) : undefined,
+        blockedRegions: process.env.FILTER_BLOCKED_REGIONS ? 
+          process.env.FILTER_BLOCKED_REGIONS.split(',').map(s => s.trim()) : undefined
       }
     };
 
@@ -296,18 +301,24 @@ export class EEWPostingService {
         timeout: 30000
       },
       posting: {
-        enabled: true,
-        minSeverity: 50, // Roughly intensity 5+ or magnitude 5+
-        onlyWarnings: true,
-        includeCancellations: true,
-        visibility: 'public',
-        localOnly: false,
-        useContentWarning: true,
-        contentWarningText: '緊急地震速報（警報）',
-        rateLimitMs: 1000
+        enabled: process.env.POSTING_ENABLED !== 'false',
+        minSeverity: parseInt(process.env.POSTING_MIN_SEVERITY || '50'), // Default higher for warnings only
+        onlyWarnings: true, // Force warnings only
+        includeCancellations: process.env.POSTING_INCLUDE_CANCELLATIONS !== 'false',
+        visibility: (process.env.POSTING_VISIBILITY as 'public' | 'home' | 'followers' | 'specified') || 'public',
+        localOnly: process.env.POSTING_LOCAL_ONLY === 'true',
+        useContentWarning: process.env.POSTING_USE_CONTENT_WARNING !== 'false', // Default true for warnings
+        contentWarningText: process.env.POSTING_CONTENT_WARNING_TEXT || '緊急地震速報（警報）',
+        customTemplate: process.env.CUSTOM_TEMPLATE,
+        rateLimitMs: parseInt(process.env.POSTING_RATE_LIMIT_MS || '1000') // Faster for warnings
       },
       filters: {
-        minMagnitude: 4.5
+        minMagnitude: process.env.FILTER_MIN_MAGNITUDE ? parseFloat(process.env.FILTER_MIN_MAGNITUDE) : 4.5,
+        maxDepth: process.env.FILTER_MAX_DEPTH ? parseInt(process.env.FILTER_MAX_DEPTH) : 700,
+        allowedRegions: process.env.FILTER_ALLOWED_REGIONS ? 
+          process.env.FILTER_ALLOWED_REGIONS.split(',').map(s => s.trim()) : undefined,
+        blockedRegions: process.env.FILTER_BLOCKED_REGIONS ? 
+          process.env.FILTER_BLOCKED_REGIONS.split(',').map(s => s.trim()) : undefined
       }
     };
 

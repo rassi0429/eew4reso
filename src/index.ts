@@ -1,4 +1,8 @@
 import { EEWServer } from './server/eew-server';
+import { setupTimezone } from './utils/timezone';
+
+// 日本時間に設定
+setupTimezone();
 
 // Get port from environment or use default
 const port = parseInt(process.env.PORT || '3338', 10);

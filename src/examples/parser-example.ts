@@ -1,5 +1,9 @@
 import { EEWParser } from '../parser/eew-parser';
 import { EEWMessage } from '../types/eew';
+import { JSTDate, setupTimezone } from '../utils/timezone';
+
+// 日本時間に設定
+setupTimezone();
 
 // Example: Parse a single EEW message
 const exampleLine = `{"type":"eew","timestamp":1749919000370,"data":{"isLastInfo":false,"isCanceled":false,"isWarning":true,"zones":[{"kind":{"lastKind":{"code":"31","name":"緊急地震速報（警報）"},"code":"31","name":"緊急地震速報（警報）"},"code":"9934","name":"北陸"}],"prefectures":[{"kind":{"lastKind":{"code":"31","name":"緊急地震速報（警報）"},"code":"31","name":"緊急地震速報（警報）"},"code":"9170","name":"石川"}],"regions":[{"kind":{"lastKind":{"code":"31","name":"緊急地震速報（警報）"},"code":"31","name":"緊急地震速報（警報）"},"code":"390","name":"石川県能登"}],"earthquake":{"originTime":"2024-01-01T16:10:07+09:00","arrivalTime":"2024-01-01T16:10:10+09:00","hypocenter":{"coordinate":{"latitude":{"text":"37.6˚N","value":"37.6000"},"longitude":{"text":"137.3˚E","value":"137.3000"},"height":{"type":"高さ","unit":"m","value":"-10000"},"geodeticSystem":"日本測地系"},"depth":{"type":"深さ","unit":"km","value":"10"},"reduce":{"code":"9777","name":"能登半島沖"},"landOrSea":"海域","accuracy":{"epicenters":["3","3"],"depth":"3","magnitudeCalculation":"5","numberOfMagnitudeCalculation":"1"},"code":"495","name":"能登半島沖"},"magnitude":{"type":"マグニチュード","unit":"Mj","value":"5.7"}},"intensity":{"forecastMaxInt":{"from":"5-","to":"5-"},"forecastMaxLgInt":{"from":"1","to":"1"},"appendix":{"maxIntChange":"0","maxLgIntChange":"0","maxIntChangeReason":"0"},"regions":[{"condition":"既に主要動到達と推測","forecastMaxInt":{"from":"5-","to":"5-"},"forecastMaxLgInt":{"from":"1","to":"1"},"isPlum":false,"isWarning":true,"kind":{"code":"11","name":"緊急地震速報（警報）"},"code":"390","name":"石川県能登"}]},"comments":{"warning":{"text":"強い揺れに警戒してください。","codes":["0201"]}}}}`;
@@ -26,7 +30,7 @@ async function demonstrateParser() {
     
     if (keyInfo.earthquake) {
       console.log('Earthquake Details:');
-      console.log(`- Origin Time: ${keyInfo.earthquake.originTime.toLocaleString('ja-JP')}`);
+      console.log(`- Origin Time: ${JSTDate.toJSTString(keyInfo.earthquake.originTime)}`);
       console.log(`- Magnitude: M${keyInfo.earthquake.magnitude}`);
       console.log(`- Depth: ${keyInfo.earthquake.depth}km`);
       console.log(`- Epicenter: ${keyInfo.earthquake.epicenter.name}`);
@@ -85,7 +89,7 @@ async function demonstrateParser() {
       if (info.earthquake) {
         console.log(`- Magnitude: M${info.earthquake.magnitude}`);
         console.log(`- Epicenter: ${info.earthquake.epicenter.name}`);
-        console.log(`- Time: ${info.earthquake.originTime.toLocaleString('ja-JP')}`);
+        console.log(`- Time: ${JSTDate.toJSTString(info.earthquake.originTime)}`);
       }
       if (info.maxIntensity) {
         console.log(`- Maximum Intensity: ${EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to)}`);
@@ -101,7 +105,7 @@ async function demonstrateParser() {
       const msg = messages[i];
       if (EEWParser.isSignificantUpdate(msg.data, previousData)) {
         updateCount++;
-        console.log(`Update #${updateCount} at ${new Date(msg.timestamp).toLocaleTimeString('ja-JP')}:`);
+        console.log(`Update #${updateCount} at ${JSTDate.toJSTTimeString(msg.timestamp)}:`);
         const info = EEWParser.extractKeyInfo(msg.data);
         const magnitude = info.earthquake ? `M${info.earthquake.magnitude}` : 'N/A';
         const intensity = info.maxIntensity ? EEWParser.formatIntensity(info.maxIntensity.from, info.maxIntensity.to) : 'N/A';

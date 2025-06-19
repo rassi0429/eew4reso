@@ -1,4 +1,5 @@
 import { EEWMessage, EEWData } from '../types/eew';
+import { JSTDate } from '../utils/timezone';
 import * as fs from 'fs';
 import * as readline from 'readline';
 
