@@ -146,6 +146,7 @@ export class EEWServer {
       const results = [];
       for (const message of messages) {
         try {
+          console.log(message)
           const posted = this.postingService ? await this.postingService.processEEW(message) : false;
           if (posted) this.stats.totalPosted++;
 
