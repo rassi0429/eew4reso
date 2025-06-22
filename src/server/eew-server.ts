@@ -6,6 +6,7 @@ import { EEWParser } from '../parser/eew-parser';
 import { EEWPostingService } from '../services/eew-posting-service';
 import { EEWMessage } from '../types/eew';
 import { JSTDate } from '../utils/timezone';
+import { hasStandardEEWData } from '../utils/type-guards';
 
 // Load environment variables
 dotenv.config();
@@ -150,7 +151,9 @@ export class EEWServer {
 
           results.push({
             timestamp: message.timestamp,
-            type: message.data.isCanceled ? 'cancel' : (message.data.isWarning ? 'warning' : 'forecast'),
+            type: hasStandardEEWData(message) 
+              ? (message.data.isCanceled ? 'cancel' : (message.data.isWarning ? 'warning' : 'forecast'))
+              : 'unknown',
             posted,
             summary: this.createMessageSummary(message)
           });
@@ -183,6 +186,11 @@ export class EEWServer {
   }
 
   private createMessageSummary(message: EEWMessage): string {
+    // Handle string data (EEWBot format)
+    if (!hasStandardEEWData(message)) {
+      return '📡 EEW情報 (EEWBot形式)';
+    }
+    
     const data = message.data;
     
     if (data.isCanceled) {

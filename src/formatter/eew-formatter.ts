@@ -1,13 +1,25 @@
-import { EEWData, EEWMessage } from '../types/eew';
+import { EEWData, EEWMessage, EEWBotData } from '../types/eew';
 import { EEWParser } from '../parser/eew-parser';
 import { JSTDate } from '../utils/timezone';
+import { hasStandardEEWData } from '../utils/type-guards';
 
 export class EEWFormatter {
   /**
    * Format EEW data for human-readable text (Misskey post)
    */
   static formatForMisskey(message: EEWMessage): string {
-    const data = message.data;
+    // Handle quake_info type
+    if (message.type === 'quake_info' && message.eewbot) {
+      return this.formatQuakeInfo(message.eewbot, message);
+    }
+    
+    // Handle EEWBot format
+    if (typeof message.data === 'string' && message.eewbot) {
+      return this.formatEEWBot(message.eewbot, message);
+    }
+    
+    // Standard format
+    const data = message.data as EEWData;
     const keyInfo = EEWParser.extractKeyInfo(data);
     
     // Handle cancellation messages
@@ -141,7 +153,22 @@ export class EEWFormatter {
    * Format short version for quick notifications
    */
   static formatShort(message: EEWMessage): string {
-    const data = message.data;
+    // Handle quake_info type
+    if (message.type === 'quake_info' && message.eewbot) {
+      return `📋 ${message.eewbot.title || '震源・震度に関する情報'}`;
+    }
+    
+    // Handle EEWBot format
+    if (typeof message.data === 'string' && message.eewbot) {
+      const eewbot = message.eewbot;
+      const icon = eewbot.isWarning ? '🚨' : '📊';
+      const type = eewbot.isWarning ? '警報' : '予報';
+      const intensity = eewbot.maxIntensity ? ` 震度${eewbot.maxIntensity}` : '';
+      return `${icon}${type} ${eewbot.epicenter} M${eewbot.magnitude}${intensity}`;
+    }
+    
+    // Standard format
+    const data = message.data as EEWData;
     const keyInfo = EEWParser.extractKeyInfo(data);
     
     if (data.isCanceled) {
@@ -166,9 +193,26 @@ export class EEWFormatter {
    * Create hashtags for the post
    */
   static createHashtags(message: EEWMessage): string[] {
+    const tags = ['#緊急地震速報', '#EEW'];
+    
+    // Handle EEWBot format
+    if (message.eewbot) {
+      if (message.eewbot.isWarning) {
+        tags.push('#地震警報');
+      }
+      if (message.eewbot.isCanceled) {
+        tags.push('#取り消し');
+      }
+      return tags;
+    }
+    
+    // Handle standard format
+    if (!hasStandardEEWData(message)) {
+      return tags;
+    }
+    
     const data = message.data;
     const keyInfo = EEWParser.extractKeyInfo(data);
-    const tags = ['#緊急地震速報', '#EEW'];
     
     if (data.isWarning) {
       tags.push('#地震警報');
@@ -201,7 +245,12 @@ export class EEWFormatter {
   /**
    * Get severity emoji based on intensity
    */
-  static getSeverityEmoji(data: EEWData): string {
+  static getSeverityEmoji(data: EEWData | string): string {
+    // Handle string data
+    if (typeof data === 'string') {
+      return '📊';
+    }
+    
     const keyInfo = EEWParser.extractKeyInfo(data);
     
     if (data.isCanceled) return '🚫';
@@ -223,10 +272,36 @@ export class EEWFormatter {
    * Format with custom template
    */
   static formatCustom(message: EEWMessage, template: string): string {
+    let result = template;
+    
+    // Handle EEWBot format
+    if (message.eewbot) {
+      const replacements: Record<string, string> = {
+        '{type}': message.eewbot.isWarning ? '警報' : '予報',
+        '{canceled}': message.eewbot.isCanceled ? '取り消し' : '',
+        '{magnitude}': message.eewbot.magnitude || 'N/A',
+        '{depth}': message.eewbot.depth || 'N/A',
+        '{epicenter}': message.eewbot.epicenter || 'N/A',
+        '{intensity}': message.eewbot.maxIntensity ? `震度${message.eewbot.maxIntensity}` : 'N/A',
+        '{time}': message.eewbot.reportDateTime ? new Date(message.eewbot.reportDateTime).toLocaleString('ja-JP') : 'N/A',
+        '{emoji}': '📊',
+        '{hashtags}': this.createHashtags(message).join(' ')
+      };
+      
+      Object.entries(replacements).forEach(([key, value]) => {
+        result = result.replace(new RegExp(key, 'g'), value);
+      });
+      
+      return result;
+    }
+    
+    // Handle standard format
+    if (!hasStandardEEWData(message)) {
+      return result;
+    }
+    
     const data = message.data;
     const keyInfo = EEWParser.extractKeyInfo(data);
-    
-    let result = template;
     
     // Replace placeholders
     const replacements: Record<string, string> = {
@@ -248,5 +323,82 @@ export class EEWFormatter {
     });
     
     return result;
+  }
+  
+  /**
+   * Format EEWBot style message
+   */
+  private static formatEEWBot(eewbot: EEWBotData, message: EEWMessage): string {
+    const icon = eewbot.isWarning ? '🚨' : '📊';
+    const type = eewbot.isWarning ? '警報' : '予報';
+    
+    const parts = [
+      `${icon} **緊急地震速報（${type}）**`,
+      ''
+    ];
+    
+    if (eewbot.epicenter) {
+      parts.push(`📍 **震源地**: ${eewbot.epicenter}`);
+    }
+    
+    if (eewbot.magnitude) {
+      parts.push(`📊 **マグニチュード**: M${eewbot.magnitude}`);
+    }
+    
+    if (eewbot.depth) {
+      parts.push(`📏 **深さ**: ${eewbot.depth}`);
+    }
+    
+    if (eewbot.maxIntensity) {
+      parts.push(`⚡ **最大予想震度**: 震度${eewbot.maxIntensity}`);
+    }
+    
+    parts.push('');
+    
+    if (eewbot.reportDateTime) {
+      parts.push(`⏰ **情報時刻**: ${JSTDate.toJSTString(new Date(eewbot.reportDateTime))}`);
+    }
+    
+    parts.push('');
+    
+    if (eewbot.isFinal) {
+      parts.push('📋 最終報');
+    } else {
+      parts.push('📄 続報あり');
+    }
+    
+    if (eewbot.serialNo) {
+      parts.push(`(第${eewbot.serialNo}報)`);
+    }
+    
+    return parts.join('\n');
+  }
+  
+  /**
+   * Format earthquake information (post-earthquake report)
+   */
+  private static formatQuakeInfo(eewbot: EEWBotData, message: EEWMessage): string {
+    const parts = [
+      `📋 **${eewbot.title || '震源・震度に関する情報'}**`,
+      ''
+    ];
+    
+    if (eewbot.eventId) {
+      parts.push(`🆔 イベントID: ${eewbot.eventId}`);
+    }
+    
+    if (eewbot.reportDateTime) {
+      parts.push(`⏰ 発表時刻: ${JSTDate.toJSTString(new Date(eewbot.reportDateTime))}`);
+    }
+    
+    if (eewbot.infoType) {
+      parts.push(`📑 情報種別: ${eewbot.infoType}`);
+    }
+    
+    if (eewbot.status) {
+      parts.push(`📊 ステータス: ${eewbot.status}`);
+    }
+    
+    return parts.join('\n');
   }
 }

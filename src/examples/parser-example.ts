@@ -1,6 +1,7 @@
 import { EEWParser } from '../parser/eew-parser';
-import { EEWMessage } from '../types/eew';
+import { EEWMessage, EEWData } from '../types/eew';
 import { JSTDate, setupTimezone } from '../utils/timezone';
+import { hasStandardEEWData } from '../utils/type-guards';
 
 // 日本時間に設定
 setupTimezone();
@@ -20,6 +21,10 @@ async function demonstrateParser() {
     console.log('');
 
     // Extract key information
+    if (!hasStandardEEWData(message)) {
+      console.log('Message does not have standard EEW data');
+      return;
+    }
     const keyInfo = EEWParser.extractKeyInfo(message.data);
     
     console.log('Key Information:');
@@ -76,6 +81,7 @@ async function demonstrateParser() {
     let highestSeverity = 0;
     
     for (const msg of messages) {
+      if (!hasStandardEEWData(msg)) continue;
       const severity = EEWParser.getSeverityLevel(msg.data);
       if (severity > highestSeverity) {
         highestSeverity = severity;
@@ -83,7 +89,7 @@ async function demonstrateParser() {
       }
     }
     
-    if (mostSevere) {
+    if (mostSevere && hasStandardEEWData(mostSevere)) {
       const info = EEWParser.extractKeyInfo(mostSevere.data);
       console.log(`\nMost severe earthquake:`);
       if (info.earthquake) {
@@ -103,6 +109,7 @@ async function demonstrateParser() {
     
     for (let i = 0; i < Math.min(10, messages.length); i++) {
       const msg = messages[i];
+      if (!hasStandardEEWData(msg)) continue;
       if (EEWParser.isSignificantUpdate(msg.data, previousData)) {
         updateCount++;
         console.log(`Update #${updateCount} at ${JSTDate.toJSTTimeString(msg.timestamp)}:`);

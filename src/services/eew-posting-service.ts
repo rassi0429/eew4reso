@@ -2,6 +2,7 @@ import { EEWMessage, EEWData } from '../types/eew';
 import { EEWParser } from '../parser/eew-parser';
 import { EEWFormatter } from '../formatter/eew-formatter';
 import { MisskeyClient, MisskeyConfig, MisskeyNote } from '../misskey/misskey-client';
+import { hasStandardEEWData } from '../utils/type-guards';
 
 export interface PostingConfig {
   misskey: MisskeyConfig;
@@ -85,7 +86,7 @@ export class EEWPostingService {
       const result = await this.client.createNoteWithRetry(note);
       
       this.state.lastPostTime = Date.now();
-      this.state.lastPostedEEW = message.data;
+      this.state.lastPostedEEW = hasStandardEEWData(message) ? message.data : null;
       this.state.postCount++;
 
       console.log(`Posted EEW to Misskey: ${result.id}`);
@@ -127,6 +128,11 @@ export class EEWPostingService {
    * Check if an EEW should be posted
    */
   private shouldPost(message: EEWMessage): boolean {
+    // Only process standard EEW data format for now
+    if (!hasStandardEEWData(message)) {
+      return false;
+    }
+    
     const data = message.data;
     const keyInfo = EEWParser.extractKeyInfo(data);
 

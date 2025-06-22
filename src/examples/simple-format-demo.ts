@@ -1,5 +1,7 @@
 import { EEWParser } from '../parser/eew-parser';
 import { EEWFormatter } from '../formatter/eew-formatter';
+import { hasStandardEEWData } from '../utils/type-guards';
+import { EEWData } from '../types/eew';
 
 async function simpleFormatDemo() {
   console.log('=== EEW フォーマット簡単デモ ===\n');
@@ -10,9 +12,9 @@ async function simpleFormatDemo() {
     console.log(`読み込み完了: ${messages.length}件のEEWメッセージ\n`);
 
     // Find different types of messages
-    const warningMessage = messages.find(m => m.data.isWarning && m.data.earthquake && m.data.intensity);
-    const cancelMessage = messages.find(m => m.data.isCanceled);
-    const forecastMessage = messages.find(m => !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
+    const warningMessage = messages.find(m => hasStandardEEWData(m) && m.data.isWarning && m.data.earthquake && m.data.intensity);
+    const cancelMessage = messages.find(m => hasStandardEEWData(m) && m.data.isCanceled);
+    const forecastMessage = messages.find(m => hasStandardEEWData(m) && !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
 
     // Demo 1: Warning message
     if (warningMessage) {
@@ -55,9 +57,9 @@ async function simpleFormatDemo() {
     }
 
     // Demo 5: Statistics
-    const warnings = messages.filter(m => m.data.isWarning).length;
-    const cancels = messages.filter(m => m.data.isCanceled).length;
-    const withEarthquake = messages.filter(m => m.data.earthquake).length;
+    const warnings = messages.filter(m => hasStandardEEWData(m) && m.data.isWarning).length;
+    const cancels = messages.filter(m => hasStandardEEWData(m) && m.data.isCanceled).length;
+    const withEarthquake = messages.filter(m => hasStandardEEWData(m) && m.data.earthquake).length;
 
     console.log('📊 統計:');
     console.log('総数:', messages.length);

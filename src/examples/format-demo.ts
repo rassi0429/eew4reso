@@ -1,5 +1,7 @@
 import { EEWParser } from '../parser/eew-parser';
 import { EEWFormatter } from '../formatter/eew-formatter';
+import { hasStandardEEWData } from '../utils/type-guards';
+import { EEWData } from '../types/eew';
 
 async function demonstrateFormatting() {
   console.log('=== EEW フォーマットデモ ===\n');
@@ -12,9 +14,9 @@ async function demonstrateFormatting() {
     console.log(`${messages.length}件のEEWメッセージを読み込みました\n`);
 
     // Find different types of messages
-    const warningMessage = messages.find(m => m.data.isWarning && m.data.earthquake && m.data.intensity);
-    const cancelMessage = messages.find(m => m.data.isCanceled);
-    const forecastMessage = messages.find(m => !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
+    const warningMessage = messages.find(m => typeof m.data === 'object' && m.data.isWarning && m.data.earthquake && m.data.intensity);
+    const cancelMessage = messages.find(m => typeof m.data === 'object' && m.data.isCanceled);
+    const forecastMessage = messages.find(m => typeof m.data === 'object' && !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
 
     // Demo 1: Warning message format
     if (warningMessage) {
@@ -82,12 +84,13 @@ async function demonstrateFormatting() {
     console.log('📊 === 重要度とアイコンのデモ ===\n');
     
     const severityDemo = messages
-      .filter(m => m.data.earthquake && m.data.intensity)
+      .filter(m => hasStandardEEWData(m) && m.data.earthquake && m.data.intensity)
       .slice(0, 10)
       .map(m => {
-        const keyInfo = EEWParser.extractKeyInfo(m.data);
-        const severity = EEWParser.getSeverityLevel(m.data);
-        const emoji = EEWFormatter.getSeverityEmoji(m.data);
+        const data = m.data as EEWData;
+        const keyInfo = EEWParser.extractKeyInfo(data);
+        const severity = EEWParser.getSeverityLevel(data);
+        const emoji = EEWFormatter.getSeverityEmoji(data);
         const intensity = keyInfo.maxIntensity 
           ? EEWParser.formatIntensity(keyInfo.maxIntensity.from, keyInfo.maxIntensity.to)
           : 'N/A';
@@ -98,7 +101,7 @@ async function demonstrateFormatting() {
           magnitude: keyInfo.earthquake?.magnitude || 0,
           intensity,
           severity,
-          isWarning: m.data.isWarning
+          isWarning: data.isWarning
         };
       })
       .sort((a, b) => b.severity - a.severity);
@@ -115,11 +118,11 @@ async function demonstrateFormatting() {
     
     const stats = {
       total: messages.length,
-      warnings: messages.filter(m => m.data.isWarning).length,
-      cancellations: messages.filter(m => m.data.isCanceled).length,
-      withEarthquake: messages.filter(m => m.data.earthquake).length,
-      withIntensity: messages.filter(m => m.data.intensity).length,
-      highSeverity: messages.filter(m => EEWParser.getSeverityLevel(m.data) >= 60).length
+      warnings: messages.filter(m => hasStandardEEWData(m) && m.data.isWarning).length,
+      cancellations: messages.filter(m => hasStandardEEWData(m) && m.data.isCanceled).length,
+      withEarthquake: messages.filter(m => hasStandardEEWData(m) && m.data.earthquake).length,
+      withIntensity: messages.filter(m => hasStandardEEWData(m) && m.data.intensity).length,
+      highSeverity: messages.filter(m => hasStandardEEWData(m) && EEWParser.getSeverityLevel(m.data) >= 60).length
     };
 
     console.log(`総メッセージ数: ${stats.total}`);

@@ -1,5 +1,6 @@
 import { EEWParser } from '../parser/eew-parser';
 import { EEWMessage, EEWData } from '../types/eew';
+import { hasStandardEEWData } from '../utils/type-guards';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -98,7 +99,12 @@ async function testParseAllEntries(): Promise<ParseResult> {
 }
 
 function analyzeMessage(message: EEWMessage, stats: ParseResult['statistics']) {
-  const data = message.data;
+  // Only analyze standard EEW data
+  if (!hasStandardEEWData(message)) {
+    return;
+  }
+  
+  const data = message.data as EEWData;
   
   // Count warnings, cancellations, and final reports
   if (data.isWarning) stats.warningCount++;
@@ -220,7 +226,13 @@ function validateDataStructure(message: EEWMessage): string[] {
     return errors;
   }
   
-  const data = message.data;
+  // Only validate standard EEW data structure
+  if (!hasStandardEEWData(message)) {
+    // EEWBot format is valid too, just different
+    return errors;
+  }
+  
+  const data = message.data as EEWData;
   
   // Check boolean fields
   if (typeof data.isLastInfo !== 'boolean') errors.push('isLastInfo is not boolean');

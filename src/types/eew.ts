@@ -1,9 +1,32 @@
 // EEW (緊急地震速報) Type Definitions
 
 export interface EEWMessage {
-  type: 'eew';
+  type: 'eew' | 'quake_info';
   timestamp: number;
-  data: EEWData;
+  data: EEWData | string;
+  eewbot?: EEWBotData;
+}
+
+export interface EEWBotData {
+  isWarning?: boolean;
+  isFinal?: boolean;
+  isCanceled?: boolean;
+  serialNo?: string;
+  reportDateTime?: string;
+  epicenter?: string;
+  depth?: string;
+  magnitude?: string;
+  maxIntensity?: string;
+  regions?: any[];
+  concurrent?: boolean;
+  concurrentIndex?: number;
+  // For quake_info type
+  eventId?: number;
+  title?: string;
+  infoType?: string;
+  serial?: string;
+  status?: string;
+  intensityAreas?: any[];
 }
 
 export interface EEWData {

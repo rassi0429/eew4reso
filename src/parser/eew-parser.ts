@@ -1,4 +1,4 @@
-import { EEWMessage, EEWData } from '../types/eew';
+import { EEWMessage, EEWData, EEWBotData } from '../types/eew';
 import { JSTDate } from '../utils/timezone';
 import * as fs from 'fs';
 import * as readline from 'readline';
@@ -17,12 +17,27 @@ export class EEWParser {
       const data = JSON.parse(trimmedLine);
       
       // Validate basic structure
-      if (data.type !== 'eew' || !data.timestamp || !data.data) {
-        console.error('Invalid EEW message structure:', data);
+      if (!data.timestamp) {
+        console.error('Invalid message: missing timestamp');
         return null;
       }
       
-      return data as EEWMessage;
+      // Handle different message types
+      if (data.type === 'eew' || data.type === 'quake_info') {
+        // Check if it's EEWBot format (data is empty string and has eewbot field)
+        if (data.data === '' && data.eewbot) {
+          // Convert EEWBot format to standard format
+          return this.convertEEWBotToStandard(data);
+        }
+        
+        // Standard format with data field
+        if (data.data && typeof data.data === 'object') {
+          return data as EEWMessage;
+        }
+      }
+      
+      console.error('Invalid EEW message structure:', data);
+      return null;
     } catch (error) {
       console.error('Failed to parse EEW line:', error);
       return null;
@@ -71,7 +86,25 @@ export class EEWParser {
   /**
    * Extract key information from EEW data for quick access
    */
-  static extractKeyInfo(eewData: EEWData) {
+  static extractKeyInfo(eewData: EEWData | string) {
+    // Handle string data (EEWBot format)
+    if (typeof eewData === 'string') {
+      return {
+        isWarning: false,
+        isCanceled: false,
+        isLastInfo: false,
+        cancelText: null,
+        earthquake: null,
+        maxIntensity: null,
+        warningRegions: [],
+        affectedAreas: {
+          zones: [],
+          prefectures: [],
+          regions: []
+        },
+        warningMessage: null
+      };
+    }
     return {
       isWarning: eewData.isWarning,
       isCanceled: eewData.isCanceled,
@@ -124,7 +157,9 @@ export class EEWParser {
   /**
    * Check if this is a significant update compared to previous EEW
    */
-  static isSignificantUpdate(current: EEWData, previous: EEWData | null): boolean {
+  static isSignificantUpdate(current: EEWData | string, previous: EEWData | null): boolean {
+    // Can't compare string data
+    if (typeof current === 'string') return true;
     if (!previous) return true;
     
     // Check if canceled status changed
@@ -185,7 +220,12 @@ export class EEWParser {
    * Get severity level (for prioritization)
    * Higher number = more severe
    */
-  static getSeverityLevel(eewData: EEWData): number {
+  static getSeverityLevel(eewData: EEWData | string): number {
+    // Handle string data (EEWBot format)
+    if (typeof eewData === 'string') {
+      return 0;
+    }
+    
     if (eewData.isCanceled) return 0;
     
     const intensityMap: Record<string, number> = {
@@ -209,5 +249,94 @@ export class EEWParser {
     
     // Consider both intensity and magnitude
     return maxIntensity * 10 + magnitude;
+  }
+
+  /**
+   * Convert EEWBot format to standard EEW format
+   */
+  static convertEEWBotToStandard(data: any): EEWMessage | null {
+    try {
+      const eewbot = data.eewbot;
+      
+      if (data.type === 'quake_info') {
+        // Handle earthquake information (post-earthquake reports)
+        return {
+          type: 'quake_info',
+          timestamp: data.timestamp,
+          data: '', // Keep as string for quake_info
+          eewbot: eewbot
+        };
+      }
+      
+      // Convert EEWBot format to standard EEW format
+      const convertedData: EEWData = {
+        isLastInfo: eewbot.isFinal || false,
+        isCanceled: eewbot.isCanceled || false,
+        isWarning: eewbot.isWarning || false
+      };
+      
+      // Add earthquake data if available
+      if (eewbot.epicenter && eewbot.magnitude) {
+        const originTime = eewbot.reportDateTime ? 
+          new Date(eewbot.reportDateTime).toISOString() : 
+          new Date().toISOString();
+          
+        convertedData.earthquake = {
+          originTime: originTime,
+          arrivalTime: originTime, // EEWBot doesn't provide arrival time
+          hypocenter: {
+            coordinate: {
+              latitude: { text: '', value: '0' }, // EEWBot doesn't provide coordinates
+              longitude: { text: '', value: '0' },
+              height: { type: '高さ', unit: 'm', value: '-10000' },
+              geodeticSystem: '日本測地系'
+            },
+            depth: {
+              type: '深さ',
+              unit: 'km',
+              value: eewbot.depth ? eewbot.depth.replace('km', '') : '0'
+            },
+            reduce: { code: '', name: eewbot.epicenter },
+            landOrSea: '海域', // Default, as EEWBot doesn't specify
+            accuracy: {
+              epicenters: ['0', '0'],
+              depth: '0',
+              magnitudeCalculation: '0',
+              numberOfMagnitudeCalculation: '0'
+            },
+            code: '',
+            name: eewbot.epicenter
+          },
+          magnitude: {
+            type: 'マグニチュード',
+            unit: 'Mj',
+            value: eewbot.magnitude
+          }
+        };
+      }
+      
+      // Add intensity data if available
+      if (eewbot.maxIntensity) {
+        // Convert intensity format (e.g., "5弱" -> "5-", "5強" -> "5+")
+        const intensityValue = eewbot.maxIntensity
+          .replace('弱', '-')
+          .replace('強', '+');
+          
+        convertedData.intensity = {
+          forecastMaxInt: { from: intensityValue, to: intensityValue },
+          forecastMaxLgInt: { from: '0', to: '0' },
+          regions: []
+        };
+      }
+      
+      return {
+        type: 'eew',
+        timestamp: data.timestamp,
+        data: convertedData
+      };
+    } catch (error) {
+      console.error('Failed to convert EEWBot format:', error);
+      return null;
+    }
   }
 }

@@ -2,6 +2,8 @@ import * as dotenv from 'dotenv';
 import { EEWParser } from '../parser/eew-parser';
 import { EEWFormatter } from '../formatter/eew-formatter';
 import { EEWPostingService, PostingConfig } from '../services/eew-posting-service';
+import { hasStandardEEWData } from '../utils/type-guards';
+import { EEWData } from '../types/eew';
 
 // Load environment variables
 dotenv.config();
@@ -41,9 +43,9 @@ async function demonstrateMisskeyPosting() {
     console.log(`${messages.length}件のEEWメッセージを読み込みました\n`);
 
     // Find some interesting messages to demonstrate
-    const warningMessage = messages.find(m => m.data.isWarning);
-    const cancelMessage = messages.find(m => m.data.isCanceled);
-    const forecastMessage = messages.find(m => !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
+    const warningMessage = messages.find(m => hasStandardEEWData(m) && m.data.isWarning);
+    const cancelMessage = messages.find(m => hasStandardEEWData(m) && m.data.isCanceled);
+    const forecastMessage = messages.find(m => hasStandardEEWData(m) && !m.data.isWarning && !m.data.isCanceled && m.data.earthquake);
 
     // Demo 1: Format messages
     console.log('=== メッセージフォーマットのデモ ===\n');
@@ -79,6 +81,7 @@ async function demonstrateMisskeyPosting() {
     let significantCount = 0;
 
     for (const message of messages) {
+      if (!hasStandardEEWData(message)) continue;
       const severity = EEWParser.getSeverityLevel(message.data);
       const isSignificant = severity >= 50; // High severity
 

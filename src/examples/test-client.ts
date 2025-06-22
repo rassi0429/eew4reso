@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { EEWParser } from '../parser/eew-parser';
+import { hasStandardEEWData } from '../utils/type-guards';
+import { EEWData } from '../types/eew';
 
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3338';
 
@@ -20,7 +22,7 @@ async function testEEWServer() {
 
     // Test 3: Send single EEW message
     console.log('3. 単一EEWメッセージの送信テスト...');
-    const warningMessage = messages.find(m => m.data.isWarning && m.data.earthquake && m.data.intensity);
+    const warningMessage = messages.find(m => hasStandardEEWData(m) && m.data.isWarning && m.data.earthquake && m.data.intensity);
     
     if (warningMessage) {
       const response = await axios.post(`${SERVER_URL}/receive`, warningMessage);
@@ -41,7 +43,7 @@ async function testEEWServer() {
 
     // Test 5: Send cancel message
     console.log('5. 取り消しメッセージの送信テスト...');
-    const cancelMessage = messages.find(m => m.data.isCanceled);
+    const cancelMessage = messages.find(m => hasStandardEEWData(m) && m.data.isCanceled);
     
     if (cancelMessage) {
       const response = await axios.post(`${SERVER_URL}/receive`, cancelMessage);
