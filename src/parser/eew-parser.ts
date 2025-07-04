@@ -31,7 +31,29 @@ export class EEWParser {
         }
         
         // Standard format with data field
-        if (data.data && typeof data.data === 'object') {
+        if (data.data) {
+          // If data is a string, parse it
+          if (typeof data.data === 'string') {
+            try {
+              const parsedData = JSON.parse(data.data);
+              // Check if this is the new format with body field
+              if (parsedData.body && parsedData._schema) {
+                return {
+                  ...data,
+                  data: parsedData.body
+                };
+              }
+              // Otherwise use the parsed data as is
+              return {
+                ...data,
+                data: parsedData
+              };
+            } catch (error) {
+              console.error('Failed to parse data string:', error);
+              return null;
+            }
+          }
+          // If data is already an object
           return data as EEWMessage;
         }
       }
