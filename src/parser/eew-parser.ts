@@ -58,7 +58,7 @@ export class EEWParser {
         }
       }
       
-      console.error('Invalid EEW message structure:', data);
+      console.error('Invalid EEW message structure:', JSON.stringify(data, null, 2));
       return null;
     } catch (error) {
       console.error('Failed to parse EEW line:', error);

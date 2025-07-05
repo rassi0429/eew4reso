@@ -109,6 +109,14 @@ export class EEWServer {
     try {
       this.stats.totalReceived++;
 
+      // Debug: Log the entire request
+      console.log('\n========== Incoming EEW Request ==========');
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Body Type:', typeof req.body);
+      console.log('Body:', JSON.stringify(req.body, null, 2));
+      console.log('==========================================\n');
+
       // Validate request body
       if (!req.body) {
         res.status(400).json({ error: 'Request body is required' });
@@ -146,7 +154,12 @@ export class EEWServer {
       const results = [];
       for (const message of messages) {
         try {
-          console.log(message)
+          console.log('\n---------- Processing EEW Message ----------');
+          console.log('Message Type:', message.type);
+          console.log('Timestamp:', message.timestamp);
+          console.log('Full Message:', JSON.stringify(message, null, 2));
+          console.log('--------------------------------------------\n');
+          
           const posted = this.postingService ? await this.postingService.processEEW(message) : false;
           if (posted) this.stats.totalPosted++;
 
